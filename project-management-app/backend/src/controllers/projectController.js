@@ -3,15 +3,67 @@ import User from '../models/User.js';
 
 export const requestProject = async (req, res) => {
   try {
-    const { title, description, teamMembers } = req.body;
-    const guideId = req.user.id;
+    const { title, description, teamMembers = [], guide } = req.body;
+
+    if (!guide) {
+      return res.status(400).json({ message: 'Please select a project guide' });
+    }
+
+    // Resolve guide: accept either an ID or an email
+    let guideUser = null;
+    try {
+      guideUser = await User.findById(guide);
+    } catch (e) {
+      // not a valid ObjectId, try as email
+    }
+    if (!guideUser) {
+      guideUser = await User.findOne({ email: guide });
+    }
+    if (!guideUser || guideUser.role !== 'teacher') {
+      return res.status(400).json({ message: 'Invalid guide selected' });
+    }
+    const guideId = guideUser._id;
+
+    // Fetch requester to get semester
+    const requester = await User.findById(req.user.id);
+    if (!requester) {
+      return res.status(404).json({ message: 'Requesting user not found' });
+    }
+    const semester = requester.semester || req.body.semester;
+    if (!semester) {
+      return res.status(400).json({ message: 'Semester is required for project request' });
+    }
+
+    // Resolve team members: accept array of user ids or emails; ensure students only
+    const resolvedStudentIds = new Set();
+
+    // always include requester
+    resolvedStudentIds.add(req.user.id);
+
+    for (const member of teamMembers) {
+      if (!member) continue;
+      let user = null;
+      try {
+        user = await User.findById(member);
+      } catch (e) {
+        // not an ObjectId, fall through
+      }
+      if (!user) {
+        user = await User.findOne({ email: member });
+      }
+      if (user && user.role === 'student') {
+        resolvedStudentIds.add(String(user._id));
+      }
+    }
+
+    const students = Array.from(resolvedStudentIds);
 
     const project = new Project({
       title,
       description,
       guide: guideId,
-      students: [req.user.id, ...teamMembers.filter(m => m !== req.user.id)],
-      semester: req.user.semester,
+      students,
+      semester,
       status: 'pending',
     });
 

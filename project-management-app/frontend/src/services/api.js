@@ -25,6 +25,7 @@ export const authService = {
   register: (data) => api.post('/auth/register', data),
   login: (email, password) => api.post('/auth/login', { email, password }),
   getCurrentUser: () => api.get('/auth/me'),
+  getTeachers: () => api.get('/auth/teachers'),
 };
 
 export const projectService = {

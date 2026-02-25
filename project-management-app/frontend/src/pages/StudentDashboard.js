@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { projectService } from '../services/api';
+import { projectService, authService } from '../services/api';
 
 const StudentDashboard = () => {
   const { user, logout } = useContext(AuthContext);
@@ -9,14 +9,20 @@ const StudentDashboard = () => {
   const [projects, setProjects] = useState([]);
   const [showRequestForm, setShowRequestForm] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [teachers, setTeachers] = useState([]);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     teamMembers: '',
+    guide: '',
   });
+  const [submitting, setSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     fetchProjects();
+    fetchTeachers();
   }, []);
 
   const fetchProjects = async () => {
@@ -30,25 +36,47 @@ const StudentDashboard = () => {
     }
   };
 
+  const fetchTeachers = async () => {
+    try {
+      const { data } = await authService.getTeachers();
+      setTeachers(data || []);
+    } catch (error) {
+      console.error('Error fetching teachers:', error);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrorMessage('');
+    setSuccessMessage('');
+    setSubmitting(true);
     try {
       const teamMembersArray = formData.teamMembers
         .split(',')
         .map(m => m.trim())
         .filter(m => m);
-      
-      await projectService.requestProject({
+      const payload = {
         title: formData.title,
         description: formData.description,
         teamMembers: teamMembersArray,
-      });
-      
-      setShowRequestForm(false);
-      setFormData({ title: '', description: '', teamMembers: '' });
-      fetchProjects();
+      };
+      if (formData.guide) payload.guide = formData.guide;
+
+      const res = await projectService.requestProject(payload);
+      if (res && (res.status === 201 || res.status === 200)) {
+        setSuccessMessage('Your project is sent successfully');
+        setShowRequestForm(false);
+        setFormData({ title: '', description: '', teamMembers: '', guide: '' });
+        fetchProjects();
+        setTimeout(() => setSuccessMessage(''), 4000);
+      } else {
+        setErrorMessage('Failed to send project request');
+      }
     } catch (error) {
       console.error('Error requesting project:', error);
+      setErrorMessage(error.response?.data?.message || 'Error requesting project');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -116,11 +144,28 @@ const StudentDashboard = () => {
                 onChange={(e) => setFormData({ ...formData, teamMembers: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
+              <select
+                value={formData.guide}
+                onChange={(e) => setFormData({ ...formData, guide: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">Select Project Guide (optional)</option>
+                {teachers.map(t => (
+                  <option key={t._id} value={t._id}>{t.name} ({t.email})</option>
+                ))}
+              </select>
+              {successMessage && (
+                <div className="text-green-600 font-medium">{successMessage}</div>
+              )}
+              {errorMessage && (
+                <div className="text-red-600 font-medium">{errorMessage}</div>
+              )}
               <button
                 type="submit"
-                className="w-full bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 transition"
+                disabled={submitting}
+                className={`w-full ${submitting ? 'bg-blue-300' : 'bg-blue-500 hover:bg-blue-600'} text-white font-bold py-2 px-4 rounded-lg transition`}
               >
-                Submit Request
+                {submitting ? 'Sending…' : 'Submit Request'}
               </button>
             </form>
           </div>
