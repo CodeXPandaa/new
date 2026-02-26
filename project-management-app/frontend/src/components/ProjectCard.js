@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const ProjectCard = ({ project, onViewDetails, onApprove, onReject, isTeacher = false }) => {
+const ProjectCard = ({ project, onViewDetails, onApprove, onReject, onDelete, isTeacher = false }) => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'approved':
@@ -68,12 +68,25 @@ const ProjectCard = ({ project, onViewDetails, onApprove, onReject, isTeacher = 
       )}
 
       {!isTeacher && (
-        <button
-          onClick={() => onViewDetails?.(project._id)}
-          className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition text-sm font-semibold"
-        >
-          View Details
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => onViewDetails?.(project._id)}
+            className="flex-1 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition text-sm font-semibold"
+          >
+            View Details
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (window.confirm('Are you sure you want to delete this project?')) {
+                onDelete?.(project._id);
+              }
+            }}
+            className="flex-1 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition text-sm font-semibold"
+          >
+            Delete
+          </button>
+        </div>
       )}
     </div>
   );

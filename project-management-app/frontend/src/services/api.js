@@ -36,6 +36,7 @@ export const projectService = {
   approveProject: (id) => api.post(`/projects/${id}/approve`),
   rejectProject: (id) => api.post(`/projects/${id}/reject`),
   updateProjectProgress: (id, progress) => api.patch(`/projects/${id}/progress`, { progress }),
+  deleteProject: (id) => api.delete(`/projects/${id}`),
 };
 
 export const wprService = {

@@ -183,3 +183,31 @@ export const updateProjectProgress = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+export const deleteProject = async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.id);
+
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+
+    // Check if the user is a student in the project
+    if (!project.students.includes(req.user.id)) {
+      return res.status(403).json({ message: 'You do not have permission to delete this project' });
+    }
+
+    // Remove project from all students' projects array
+    await User.updateMany(
+      { _id: { $in: project.students } },
+      { $pull: { projects: project._id } }
+    );
+
+    // Delete the project
+    await Project.findByIdAndDelete(req.params.id);
+
+    res.json({ message: 'Project deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

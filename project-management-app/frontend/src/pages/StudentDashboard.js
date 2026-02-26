@@ -80,6 +80,19 @@ const StudentDashboard = () => {
     }
   };
 
+  const handleDeleteProject = async (projectId) => {
+    try {
+      await projectService.deleteProject(projectId);
+      setSuccessMessage('Project deleted successfully');
+      fetchProjects();
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      setErrorMessage(error.response?.data?.message || 'Error deleting project');
+      setTimeout(() => setErrorMessage(''), 4000);
+    }
+  };
+
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -107,6 +120,18 @@ const StudentDashboard = () => {
       </nav>
 
       <div className="max-w-7xl mx-auto p-6">
+        {successMessage && (
+          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-6">
+            {successMessage}
+          </div>
+        )}
+
+        {errorMessage && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+            {errorMessage}
+          </div>
+        )}
+
         <div className="flex justify-between items-center mb-8">
           <h2 className="text-2xl font-bold text-gray-800">My Projects</h2>
           <button
@@ -154,12 +179,6 @@ const StudentDashboard = () => {
                   <option key={t._id} value={t._id}>{t.name} ({t.email})</option>
                 ))}
               </select>
-              {successMessage && (
-                <div className="text-green-600 font-medium">{successMessage}</div>
-              )}
-              {errorMessage && (
-                <div className="text-red-600 font-medium">{errorMessage}</div>
-              )}
               <button
                 type="submit"
                 disabled={submitting}
@@ -190,11 +209,33 @@ const StudentDashboard = () => {
                 </span>
                 <span className="text-sm text-gray-500">Progress: {project.progress}%</span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
                 <div
                   className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                   style={{ width: `${project.progress}%` }}
                 ></div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/project/${project._id}`);
+                  }}
+                  className="flex-1 bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition text-sm font-semibold"
+                >
+                  View Details
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (window.confirm('Are you sure you want to delete this project?')) {
+                      handleDeleteProject(project._id);
+                    }
+                  }}
+                  className="flex-1 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition text-sm font-semibold"
+                >
+                  Delete
+                </button>
               </div>
             </div>
           ))}
