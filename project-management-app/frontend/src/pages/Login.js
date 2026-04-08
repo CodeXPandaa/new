@@ -1,7 +1,8 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { authService } from '../services/api';
+import { useAuth0 } from '@auth0/auth0-react';
 
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -15,8 +16,24 @@ const Login = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useContext(AuthContext);
+  const { login, user, isAuthenticated } = useContext(AuthContext);
+  const { loginWithRedirect } = useAuth0();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isAuthenticated || user) {
+      const destination = user?.role === 'teacher' ? '/teacher-dashboard' : '/student-dashboard';
+      navigate(destination, { replace: true });
+    }
+  }, [isAuthenticated, user, navigate]);
+
+  const handleAuth0Login = () => {
+    loginWithRedirect();
+  };
+
+  const handleAuth0Signup = () => {
+    loginWithRedirect({ authorizationParams: { screen_hint: 'signup' } });
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -32,11 +49,9 @@ const Login = () => {
       if (isLogin) {
         const { data } = await authService.login(formData.email, formData.password);
         login(data.user, data.token);
-        navigate(data.user.role === 'teacher' ? '/teacher-dashboard' : '/student-dashboard');
       } else {
         const { data } = await authService.register(formData);
         login(data.user, data.token);
-        navigate(data.user.role === 'teacher' ? '/teacher-dashboard' : '/student-dashboard');
       }
     } catch (err) {
       setError(err.response?.data?.message || 'An error occurred');
@@ -132,6 +147,24 @@ const Login = () => {
             {loading ? 'Processing...' : isLogin ? 'Login' : 'Register'}
           </button>
         </form>
+
+        <div className="space-y-3 mt-4">
+          <button
+            onClick={handleAuth0Login}
+            className="w-full bg-black text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-900 transition"
+          >
+            Login with Auth0
+          </button>
+          <button
+            onClick={handleAuth0Signup}
+            className="w-full bg-white border border-gray-300 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-50 transition"
+          >
+            Signup with Auth0
+          </button>
+          <p className="text-sm text-gray-500 text-center">
+            You can also continue with local credentials using the form above.
+          </p>
+        </div>
 
         <button
           onClick={() => {
